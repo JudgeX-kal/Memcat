@@ -1,7 +1,7 @@
 
 $ErrorActionPreference = 'Stop'
 
-$CaptureExe = 'C:\DF\memory_capture_go_winpmem.exe'
+$CaptureExe = 'memory_capture_go_winpmem.exe'
 
 # Create a unique timestamped log for each execution.
 $Timestamp = Get-Date -Format 'yyyyMMdd_HHmmss_fff'

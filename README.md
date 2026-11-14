@@ -46,7 +46,7 @@ SFTP server destination	Receives encrypted image and manifest.
 **1.1 Prerequisites and version context**
 
 Wazuh Manager/API	Wazuh v4.14.10 was observed on the Ubuntu manager.
-Windows agent	Wazuh v4.14.9; Windows 10 Pro N, build 19045.6466.
+Windows agent	Wazuh v4.14.9; Windows 10 or 11.
 Dashboard	OpenSearch Dashboards 2.19.6.
 Custom plugin	dfAcquisitionConsole.
 Plugin source	~/wazuh-dashboard-build/plugins/df-wazuh-acquisition-plugin.
@@ -55,11 +55,13 @@ Plugin install location	/usr/share/wazuh-dashboard/plugins/dfAcquisitionConsole.
 **1.2 Installation the custom Dashboard plugin**
 
 Run as a user with sudo rights:
+
 sudo /usr/share/wazuh-dashboard/bin/opensearch-dashboards-plugin install \
   file:///home/wazuh/wazuh-dashboard-build/plugins/df-wazuh-acquisition-plugin/build/dfAcquisitionConsole-2.19.6.zip \
   --allow-root
  
 sudo systemctl restart wazuh-dashboard
+
 sleep 25
  
 **1.3 Wazuh API environment variables and TLS**
@@ -73,6 +75,7 @@ The Dashboard systemd override used an environment file and explicitly configure
 EnvironmentFile=/etc/wazuh-dashboard/df-acquisition.env
 Environment="DF_WAZUH_API_URL=https://localhost:55000"
 Environment="NODE_EXTRA_CA_CERTS=/etc/wazuh-dashboard/certs/wazuh-api-selfsigned.pem"
+
 The environment file contains credentials. Use the real Wazuh API username and password; do not put secrets in plugin source, browser JavaScript, source control, screenshots, or logs.
 
 /etc/wazuh-dashboard/df-acquisition.env
@@ -81,7 +84,9 @@ DF_WAZUH_API_USERNAME=<dedicated-api-user>
 DF_WAZUH_API_PASSWORD=<strong-secret>
 
 After editing systemd or environment configuration:
+
 sudo systemctl daemon-reload
+
 sudo systemctl restart wazuh-dashboard
 
 The Node process reads NODE_EXTRA_CA_CERTS at process startup, so restart is required after changing it. The CA file must actually validate the Wazuh API certificate. In this deployment, an existing root-ca.pem did not validate the API certificate; the API certificate was self-signed with subject/issuer CN=wazuh.com, and a dedicated certificate file was configured. Verify the certificate chain rather than disabling TLS verification.

@@ -18,7 +18,7 @@ Scope and evidence note: This guide records the configuration and behavior estab
 **Overview and architecture**
 
 The solution provides an analyst-triggered memory acquisition workflow from a custom Wazuh Dashboard plugin. The plugin sends an Active Response request through the Wazuh API. The Wazuh agent executes a CMD wrapper, which starts a PowerShell handler. The handler reads the Wazuh JSON message from standard input, validates the case metadata and analyst public key, and launches the Go acquisition executable.
-The Go executable embeds/uses the signed WinPmem executable for physical memory acquisition, calculates a SHA-256 hash of the raw image, compresses/encrypts the evidence using the supplied X25519 public key and AES-256-GCM, writes a manifest, and attempts SFTP upload. If upload fails, the tested executable retained the encrypted evidence locally.
+The Go executable embeds/uses the signed WinPmem executable for physical memory acquisition, calculates a SHA-256 hash of the raw image, compresses/encrypts the evidence using the supplied X25519 public key and AES-256-GCM, writes a manifest, and attempts SFTP upload. If upload fails, the tool retains the encrypted evidence locally.
 
 **Component	Role	Known project detail**
 
@@ -33,37 +33,11 @@ PowerShell/CMD handler	Reads JSON, extracts arguments, validates input, invokes 
 Go acquisition executable	WinPmem acquisition, hashing, encryption, manifest and SFTP upload.
 SFTP server destination	Receives encrypted image and manifest.
 
-Data flow
-Analyst
-  |
-  v
-Custom Wazuh Dashboard plugin (dfAcquisitionConsole)
-  |
-  | Wazuh API Active Response request
-  v
-Wazuh Manager / API (Ubuntu)
-  |
-  | Active Response command + JSON on STDIN
-  v
-Windows Wazuh agent (execd)
-  |
-  +--> df-memory-capture.cmd
-          |
-          +--> df-memory-capture.ps1
-                  |
-                  +--> memory_capture_go_winpmem.exe
-                          |
-                          +--> WinPmem raw memory acquisition
-                          +--> SHA-256
-                          +--> gzip + X25519/AES-256-GCM encryption
-                          +--> JSON manifest
-                          +--> SFTP upload
-Important status distinction: A successful Wazuh API dispatch confirms that the manager accepted/sent the command, not that memory acquisition or upload completed. The endpoint log and acquisition program output are the evidence of later stages.
 
 **PART 1 — Build and install the acquisition pipeline**
 
-1.1 Prerequisites and version context
-Item	Recorded value
+**1.1 Prerequisites and version context**
+
 Wazuh Manager/API	Wazuh v4.14.10 was observed on the Ubuntu manager.
 Windows agent	Wazuh v4.14.9; Windows 10 Pro N, build 19045.6466.
 Dashboard	OpenSearch Dashboards 2.19.6.

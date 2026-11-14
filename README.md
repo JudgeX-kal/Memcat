@@ -8,13 +8,20 @@ Implementation record and deployment reference
 Scope and evidence note: This guide records the configuration and behavior established during the project.  Do not treat example addresses, usernames, paths, or permission settings as proof of the live configuration. Current Limitation it only tested on windows 10.
 
 **Contents
+
 ⦁	Overview and architecture
+
 ⦁	Part 1 — Build and install the acquisition pipeline
+
 ⦁	Part 2 — Ubuntu Wazuh server, Tailscale and SFTP collection
+
 ⦁	Recommended permissions and hardening
+
 ⦁	End-to-end validation and troubleshooting
+
 ⦁	Operational limitations and handover checklist**
 
+
 **Overview and architecture**
 
 The solution provides an analyst-triggered memory acquisition workflow from a custom Wazuh Dashboard plugin. The plugin sends an Active Response request through the Wazuh API. The Wazuh agent executes a CMD wrapper, which starts a PowerShell handler. The handler reads the Wazuh JSON message from standard input, validates the case metadata and analyst public key, and launches the Go acquisition executable.

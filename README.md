@@ -78,20 +78,30 @@ sudo systemctl daemon-reload
 sudo systemctl restart wazuh-dashboard
 
 The Node process reads NODE_EXTRA_CA_CERTS at process startup, so restart is required after changing it. The CA file must actually validate the Wazuh API certificate. In this deployment, an existing root-ca.pem did not validate the API certificate; the API certificate was self-signed with subject/issuer CN=wazuh.com, and a dedicated certificate file was configured. Verify the certificate chain rather than disabling TLS verification.
+
 **1.4 Wazuh API client and Active Response route**
 
-The plugin API client calls the Wazuh security authentication endpoint, then sends the Active Response request using HTTP PUT. The relevant endpoint shape tested was:
+The plugin API client calls the Wazuh security authentication endpoint, then sends the Active Response request using HTTP PUT.
+
 PUT /active-response?agents_list=001
+
 Content-Type: application/json
  
 {
+
   "command": "!df-memory-capture.cmd",
+  
   "arguments": [
+  
     "case_id=DF-ARG-TEST-001",
+    
     "analyst_id=df.test",
+    
     "pubkey=<64-hex-character-X25519-public-key>"
+  
   ]
 }
+
 The command must match the registered Wazuh command name. A request using an incorrect command name returned Wazuh error 1652.
 
 **1.5 Register the command on the Wazuh Manager**
@@ -99,9 +109,13 @@ The command must match the registered Wazuh command name. A request using an inc
 On the Ubuntu Wazuh Manager, edit /var/ossec/etc/ossec.conf and register the command:
 
 <command>
+
   <name>df-memory-capture</name>
+  
   <executable>df-memory-capture.cmd</executable>
+  
   <timeout_allowed>no</timeout_allowed>
+
 </command>
 
 The executable name must correspond to the wrapper deployed on the Windows agent. The command is invoked by the API as !df-memory-capture.cmd in the  configuration.
@@ -109,9 +123,13 @@ The executable name must correspond to the wrapper deployed on the Windows agent
 The Windows endpoint's Active Response configuration:
 
 <active-response>
+
   <disabled>no</disabled>
+  
   <ca_store>wpk_root.pem</ca_store>
+  
   <ca_verification>yes</ca_verification>
+
 </active-response>
 
 This enables Active Response and retains certificate verification.
@@ -119,10 +137,15 @@ This enables Active Response and retains certificate verification.
 **1.6 Deploy the Windows endpoint files**
 
 The following files were deployed under the Windows agent's Active Response binary directory:
+
 C:\Program Files (x86)\ossec-agent\active-response\bin\
+
     df-memory-capture.cmd
+    
     df-memory-capture.ps1
-The CMD wrapper starts Windows PowerShell without loading the profile, uses non-interactive mode, bypasses the local execution-policy prompt for this signed/deployed handler, and propagates the PowerShell exit code:
+
+The CMD wrapper starts Windows PowerShell without loading the profile, uses non-interactive mode, bypasses the local execution-policy prompt for this signed/deployed handler.
+
 Use the deployed script and wrapper names consistently with the manager's command registration.
 
 
@@ -133,7 +156,8 @@ The observed output layout was C:\DF\Acquisitions\<case-id>\ with the encrypted 
 
 **1.8 Acquisition executable and WinPmem**
 
-The Go acquisition executable memory_capture_go_winpmem.exe. Its help output listed --ticket, --analyst, --winpmem (notool build only), --output, --case-ref, --pubkey, --keygen, --no-cleanup, --verbose, --decrypt and --output-file.
+The Go acquisition executable memory_capture_go_winpmem.exe.
+Its help output listed --ticket, --analyst, --winpmem (notool build only), --output, --case-ref, --pubkey, --keygen, --no-cleanup, --verbose, --decrypt and --output-file.
 
 The embedded WinPmem binary was obtained from the Velocidex release URL supplied during the project:
 **https://github.com/Velocidex/WinPmem/releases/download/v4.0.rc1/go-winpmem_amd64_1.0-rc2_signed.exe
@@ -142,14 +166,23 @@ The project identified this as WinPmem release v4.0.rc1 and the binary go-winpme
 **1.9 Plugin and endpoint validation**
 
 Test evidence	What it proves
+
 Dashboard dispatch	Wazuh API response error=0; affected_items includes selected agent; total_failed_items=0.	Manager accepted/dispatched the request.
+
 Wrapper launch	Timestamped wrapper_debug file or process evidence.	Windows agent launched the CMD wrapper.
+
 PowerShell launch	Timestamped capture log begins with handler-start event.	PowerShell handler started.
+
 STDIN/JSON	Input length, command=add and parsed extra_args.	Wazuh payload reached and parsed by handler.
+
 Argument validation	Case ID, analyst ID, public-key-supplied status and validation success.	The invocation metadata passed validation.
+
 Acquisition	WinPmem capture output, memory size, raw SHA-256.	The acquisition executable completed its capture stage.
+
 Encryption	Encrypted path and encrypted SHA-256.	Encrypted evidence was produced.
+
 Manifest	Manifest path and JSON file exists.	Manifest was written.
+
 Upload	Uploaded=true or confirmed SFTP-side receipt.	Evidence was delivered to the collection server.
 
 
@@ -158,23 +191,30 @@ Upload	Uploaded=true or confirmed SFTP-side receipt.	Evidence was delivered to t
 **2.1 Ubuntu server roles**
 
 The Ubuntu host was used for the Wazuh Manager/API and Dashboard environment. The same or a separate Ubuntu host may provide the SFTP evidence-collection service.
-Ubuntu 24.04.4 LTS; Wazuh API/manager v4.14.10 was observed.
+Ubuntu 24.04.4 LTS; Wazuh API/manager v4.14.10 is recommeded.
 
 **2.2 Install and connect Tailscale**
 
 Tailscale provides a private WireGuard-based network between the Windows endpoint and Ubuntu collection server. Install the official Tailscale client on each machine, authenticate both into the same tailnet (or configure approved sharing), and verify that the devices appear online in the Tailscale admin console.
+
 Use the current official Tailscale installation instructions for Ubuntu 24.04 and Windows, and do not reuse an old auth key. On Ubuntu, the common service verification commands are:
 
 sudo systemctl status tailscaled --no-pager
+
  tailscale status
+ 
  tailscale ip -4
 
 On Windows PowerShell:
+
  tailscale status
+ 
  tailscale ip -4
+ 
  Test-NetConnection 100.x.x.x -Port 22
 
 Replace 100.x.x.x with the actual current Tailscale IPv4 address of the SFTP server. Test from the endpoint under the same network conditions and service identity context as the acquisition workflow where possible.
+
 If the TCP test times out, check that both devices are online in the same tailnet, the SFTP daemon is listening on TCP/22, Ubuntu host firewall allows the intended Tailscale source, and Tailscale ACL/grants permit the Windows device to reach the server on port 22. A Tailscale ping alone does not prove that TCP/22 is reachable.
 
 **2.3 Tailscale ACL / access policy**
